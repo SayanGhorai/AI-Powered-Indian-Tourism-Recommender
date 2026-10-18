@@ -1,0 +1,54 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Local development and notebook checkpoints
+kaggle_checkpoints/
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Application backups
+*.backup_*
+
+# Secrets and local environment configuration
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+.streamlit/secrets.*.toml
+*credentials*.json
+*service-account*.json
+*.pem
+*.key
+
+# Temporary files and logs
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Keep production application and evidence assets tracked
+!production_package/
+!src/
+!v3_data/
+!v3_streamlit_app.py
+!requirements.txt
+
+# Local Kaggle production handoff archive
+# The extracted runtime above is used for deployment.
+/production_package/Indian-Tourism-AI-Recommender-Production.zip

@@ -1,0 +1,18 @@
+{
+  "place_count": 15239,
+  "semantic_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "semantic_dimension": 384,
+  "semantic_chunk_count": 29442,
+  "lexical_method": "TF-IDF",
+  "semantic_method": "SBERT + FAISS",
+  "fusion_method": "Reciprocal Rank Fusion",
+  "city_strategy": "strict city-first retrieval",
+  "reranker": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "validated_rerank_depth": 10,
+  "evaluation_status": "10-query development/pilot benchmark",
+  "production_status": "candidate architecture",
+  "city_query_handling": "detect city -> remove city surface from ranking query -> strict city filter",
+  "branch_candidate_k": 50,
+  "rrf_k": 60,
+  "regression_validation": "exact match with saved Cell-65 rankings"
+}

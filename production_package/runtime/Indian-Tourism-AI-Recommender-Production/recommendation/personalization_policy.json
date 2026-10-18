@@ -1,0 +1,21 @@
+{
+  "architecture": "retrieval -> Cross-Encoder -> preference-aware recommendation",
+  "primary_relevance_signal": "Cross-Encoder",
+  "catalog_quality_signal": "Bayesian rating",
+  "universal_hard_constraints": [
+    "minimum rating",
+    "minimum review count"
+  ],
+  "optional_sparse_preferences": [
+    "attraction type",
+    "significance",
+    "entrance fee",
+    "visit duration",
+    "DSLR allowed",
+    "airport within 50 km"
+  ],
+  "missing_metadata_policy": "unknown sparse metadata does not count as a mismatch and is not penalized",
+  "sentiment_policy": "used for explanation/support; not independently boosted alongside rating",
+  "weight_tuning": "none",
+  "benchmark_tuning": "no personalization weights tuned on the 10-query development benchmark"
+}

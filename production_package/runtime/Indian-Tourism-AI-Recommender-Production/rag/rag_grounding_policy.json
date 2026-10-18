@@ -1,0 +1,23 @@
+{
+  "rag_role": "grounded natural-language presentation of already retrieved recommendations",
+  "retrieval_architecture": [
+    "city-aware Hybrid retrieval",
+    "Cross-Encoder reranking",
+    "conservative recommendation layer",
+    "structured explainability",
+    "RAG context construction"
+  ],
+  "generation_location": "API-based LLM integration deferred to VS Code / Streamlit production phase",
+  "kaggle_llm_training": false,
+  "grounding_rules": [
+    "use only retrieved verified places",
+    "do not invent missing metadata",
+    "do not invent ratings or review counts",
+    "do not change geographic constraints",
+    "treat review excerpts as supporting evidence",
+    "preserve deterministic fallback"
+  ],
+  "default_top_k": 5,
+  "default_candidate_k": 10,
+  "review_excerpt_max_chars": 900
+}

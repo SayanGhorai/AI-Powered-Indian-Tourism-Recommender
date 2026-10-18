@@ -1,0 +1,21 @@
+{
+  "architecture": [
+    "city-aware hybrid retrieval",
+    "Cross-Encoder reranking",
+    "explicit hard constraints",
+    "Cross-Encoder near-tie grouping",
+    "optional preference evidence",
+    "Bayesian quality tie-break",
+    "explainability"
+  ],
+  "cross_encoder_role": "primary relevance signal",
+  "near_tie_method": "adjacent CE score grouping using 5% of candidate-set CE score range",
+  "near_tie_range_fraction": 0.05,
+  "near_tie_threshold_status": "engineering heuristic; not tuned on relevance benchmark",
+  "quality_role": "secondary tie-break only; cannot cross clear CE relevance tiers",
+  "preference_role": "explicit preference evidence within relevance-preserving CE tiers",
+  "sparse_metadata_policy": "missing sparse metadata receives neither reward nor penalty",
+  "sentiment_role": "explanation/support signal only; not separately added to rating quality",
+  "personalization_training": "none",
+  "personalization_benchmark_tuning": "none"
+}

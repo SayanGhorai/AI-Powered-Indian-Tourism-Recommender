@@ -1,0 +1,6 @@
+﻿place_id,source_name,source_url,source_type,evidence_scope,review_status,verified_at,notes
+INPLACE_07148,Victoria Memorial Hall,https://victoriamemorial-cal.org/visit-us/,official_attraction,museum_and_garden_tickets_hours,candidate_pending_structured_review,,Museum and garden admission must remain separate.
+INPLACE_10280,Delhi Tourism,https://delhitourism.gov.in/tourist_place/humayun_tomb.html,government_tourism,visitor_information_and_ticket_reference,candidate_pending_structured_review,,Cross-check ticket prices with current ASI ticketing.
+INPLACE_05267,Rajasthan Tourism,https://www.tourism.rajasthan.gov.in/jaipur.html,government_tourism,attraction_identity_and_description,candidate_pending_structured_review,,Albert Hall Museum; research visitor details separately.
+INPLACE_07020,Indian Museum Kolkata,https://indianmuseumkolkata.org/,official_attraction,visitor_information_and_ticket_categories,candidate_pending_structured_review,,"Separate admission, photography fees and closures."
+INPLACE_10425,Delhi Tourism,https://www.delhitourism.gov.in/tourist_place/qutab_minar.html,government_tourism,attraction_identity_and_description,candidate_pending_structured_review,,Check current fees with ASI before recording.

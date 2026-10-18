@@ -1,0 +1,168 @@
+{
+  "project": "AI-Powered Indian Tourism Recommender",
+  "internal_version": "V2",
+  "bundle_role": "Streamlit / VS Code runtime inference artifacts",
+  "created_utc": "2026-10-04T11:46:02.129237+00:00",
+  "catalog_places": 15239,
+  "semantic_chunks": 29442,
+  "semantic_dimension": 384,
+  "tfidf_shape": [
+    15239,
+    150000
+  ],
+  "runtime_artifact_count": 15,
+  "runtime_artifact_size_mb": 93.0359,
+  "runtime_files": [
+    {
+      "path": "data/places_master_stage5.parquet",
+      "size_bytes": 2261802,
+      "size_mb": 2.157,
+      "sha256": "d9e0a1d75d0d3bc8321a5616834992fda10e48a02631a3c4a43f01ff94624fbf"
+    },
+    {
+      "path": "explainability/explainability_policy.json",
+      "size_bytes": 777,
+      "size_mb": 0.0007,
+      "sha256": "a637756440ee98507ebc188520a70c01061f219e5e950c4f79d47e5a6d21b1ba"
+    },
+    {
+      "path": "rag/rag_grounding_policy.json",
+      "size_bytes": 810,
+      "size_mb": 0.0008,
+      "sha256": "49b3d7d8c21b4d92142ea55b312390f9021431304d4ef81bbda4f7fb896e06ab"
+    },
+    {
+      "path": "recommendation/final_recommendation_policy.json",
+      "size_bytes": 970,
+      "size_mb": 0.0009,
+      "sha256": "88e46f78f9b8c7dda4e40a701a0c3d8047ac5633902337d0712bbf8907efc020"
+    },
+    {
+      "path": "recommendation/personalization_policy.json",
+      "size_bytes": 766,
+      "size_mb": 0.0007,
+      "sha256": "73579b16e1e8f60c5e94af332e01f1aa41b40fb8abbfbe632b78c113bf4a8dc3"
+    },
+    {
+      "path": "recommendation/place_recommendation_features.parquet",
+      "size_bytes": 445465,
+      "size_mb": 0.4248,
+      "sha256": "d2b17b2c76f92f7bcbe1fcfcb056f353c357487dded1195530b52e31bcb56995"
+    },
+    {
+      "path": "recommendation/recommendation_feature_config.json",
+      "size_bytes": 567,
+      "size_mb": 0.0005,
+      "sha256": "5adf1c080ba00c53589a5f3cec7764b7c35f02cf45975c25f177b9b513c291c7"
+    },
+    {
+      "path": "retrieval/cross_encoder_reranker_config.json",
+      "size_bytes": 722,
+      "size_mb": 0.0007,
+      "sha256": "5c34fb8734f1b9630228b1d4900d32c59c61f167e96d2fe06db45f9de3a409ee"
+    },
+    {
+      "path": "retrieval/place_retrieval_documents.parquet",
+      "size_bytes": 24378677,
+      "size_mb": 23.2493,
+      "sha256": "30d10d85d0a7523d0c64ce313dbc7e0cd805748550a53995bca53691ccfc5b43"
+    },
+    {
+      "path": "retrieval/production_retrieval_config.json",
+      "size_bytes": 728,
+      "size_mb": 0.0007,
+      "sha256": "ddafd37d864f06a9e55968659f2f7987f701bd026491f98c3ffb3dd859a46105"
+    },
+    {
+      "path": "retrieval/semantic_chunk_lookup.parquet",
+      "size_bytes": 959165,
+      "size_mb": 0.9147,
+      "sha256": "f9ad55ed687d8c096eccd401bd76db78905a8322f1679b20064300677acbf4b4"
+    },
+    {
+      "path": "retrieval/semantic_chunks.faiss",
+      "size_bytes": 45222957,
+      "size_mb": 43.128,
+      "sha256": "38c98637de3f338c9addfc1d4ceb243fc204310c129016ddccb1eaa4c988fdb3"
+    },
+    {
+      "path": "retrieval/tfidf_place_lookup.parquet",
+      "size_bytes": 740334,
+      "size_mb": 0.706,
+      "sha256": "25736492ebb663fa92dd1d286b3cb3bc63b746b5f5e4f787f69b8a8ff1c91bb4"
+    },
+    {
+      "path": "retrieval/tfidf_retrieval_matrix.npz",
+      "size_bytes": 17876753,
+      "size_mb": 17.0486,
+      "sha256": "6c68793b7514c9b1199d3992d6fce373ed5630c608b296ce2350d352faa60acd"
+    },
+    {
+      "path": "retrieval/tfidf_retrieval_vectorizer.joblib",
+      "size_bytes": 5664729,
+      "size_mb": 5.4023,
+      "sha256": "fcf5619f96a109a333256a620148114d3cfe6a03050ab3e84e61ef322d7dfdbf"
+    }
+  ],
+  "external_models": {
+    "semantic_encoder": {
+      "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "purpose": "query embedding for semantic FAISS retrieval",
+      "expected_embedding_dimension": 384,
+      "bundled": false
+    },
+    "cross_encoder": {
+      "model_id": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "purpose": "rerank Hybrid Top-10 candidates",
+      "validated_rerank_depth": 10,
+      "bundled": false
+    },
+    "sentiment_model": {
+      "model_id": "project-trained DistilBERT sentiment classifier",
+      "purpose": "offline preprocessing only; NOT required for deployed inference",
+      "bundled": false,
+      "runtime_required": false
+    }
+  },
+  "retrieval_architecture": [
+    "city detection",
+    "city text removal for city-constrained Hybrid ranking",
+    "TF-IDF lexical retrieval",
+    "SBERT + FAISS semantic retrieval",
+    "Reciprocal Rank Fusion",
+    "strict city-first filtering",
+    "Cross-Encoder reranking using original user query"
+  ],
+  "recommendation_architecture": [
+    "Cross-Encoder relevance",
+    "explicit hard constraints",
+    "CE near-tie grouping",
+    "optional preference evidence",
+    "Bayesian quality tie-break"
+  ],
+  "rag_architecture": [
+    "retrieved verified places",
+    "structured explainability",
+    "bounded review evidence",
+    "grounded context package",
+    "API LLM integration deferred to application layer",
+    "deterministic fallback"
+  ],
+  "validated_cross_encoder_rerank_depth": 10,
+  "important_limitations": [
+    "Structured tourism metadata is sparse (approximately 1.4% catalog coverage).",
+    "Missing sparse metadata must not be treated as negative evidence.",
+    "Rating and NLP sentiment are strongly correlated and must not be independently double-counted as quality signals.",
+    "The manual retrieval evaluation is a 10-query development/pilot benchmark, not a definitive independent test set.",
+    "Cross-Encoder validation was performed at rerank depth 10.",
+    "External SBERT and Cross-Encoder weights must be available/downloadable at runtime unless separately cached."
+  ],
+  "excluded_runtime_artifacts": [
+    "reviews_dedup.parquet",
+    "semantic_chunk_embeddings.npy",
+    "DistilBERT sentiment model weights",
+    "full review-level sentiment predictions",
+    "training checkpoints",
+    "evaluation-only benchmark artifacts"
+  ]
+}

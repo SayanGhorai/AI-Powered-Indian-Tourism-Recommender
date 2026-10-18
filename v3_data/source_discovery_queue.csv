@@ -1,0 +1,29 @@
+﻿place_id,city_canonical,catalog_place_name,legacy_attraction_type,suggested_source_category,research_status,candidate_source_name,candidate_source_url,research_notes,priority
+INPLACE_05267,jaipur,Albert Hall Museum,Museum,museum_or_institution,not_started,,,,1
+INPLACE_07020,kolkata,Indian Museum (Jadu Ghar),Museum,museum_or_institution,not_started,,,,1
+INPLACE_10425,new delhi,Qutub Minar,Monument,heritage_or_monument_authority,not_started,,,,1
+INPLACE_05297,jaipur,City Palace of Jaipur,Palace,government_tourism_or_site_operator,not_started,,,,2
+INPLACE_05340,jaipur,Hawa Mahal - Palace of Wind,Palace,heritage_or_monument_authority,not_started,,,,2
+INPLACE_05344,jaipur,Jaigarh Fort,Fort,heritage_or_monument_authority,not_started,,,,2
+INPLACE_06991,kolkata,Dakshineswar Kali Temple,Temple,religious_institution,not_started,,,,2
+INPLACE_06998,kolkata,Eden Gardens,Cricket Ground,park_or_site_operator,not_started,,,,2
+INPLACE_07018,kolkata,Howrah Bridge,Bridge,government_tourism_or_site_operator,not_started,,,,2
+INPLACE_07026,kolkata,Kalighat Kali Temple,Temple,religious_institution,not_started,,,,2
+INPLACE_07049,kolkata,Marble Palace,Palace,government_tourism_or_site_operator,not_started,,,,2
+INPLACE_07100,kolkata,Science City,Science,government_tourism_or_site_operator,not_started,,,,2
+INPLACE_10121,new delhi,Agrasen Ki Baoli - Leamigo,Stepwell,heritage_or_monument_authority,not_started,,,,2
+INPLACE_10178,new delhi,Chandni Chowk,Market,government_tourism_or_site_operator,not_started,,,,2
+INPLACE_10242,new delhi,Friday Mosque (Jama Masjid),Mosque,religious_institution,not_started,,,,2
+INPLACE_10249,new delhi,Garden of Five Senses,Park,park_or_site_operator,not_started,,,,2
+INPLACE_10259,new delhi,Gurudwara Bangla Sahib,Gurudwara,religious_institution,not_started,,,,2
+INPLACE_10283,new delhi,India Gate,War Memorial,government_tourism_or_site_operator,not_started,,,,2
+INPLACE_10307,new delhi,Jantar Mantar,Observatory,government_tourism_or_site_operator,not_started,,,,2
+INPLACE_10339,new delhi,Lodhi Garden,Park,park_or_site_operator,not_started,,,,2
+INPLACE_10341,new delhi,Lotus Temple,Temple,religious_institution,not_started,,,,2
+INPLACE_10377,new delhi,National Gallery of Modern Art,Museum,museum_or_institution,not_started,,,,2
+INPLACE_10386,new delhi,National Rail Museum,Museum,museum_or_institution,not_started,,,,2
+INPLACE_10388,new delhi,National Science Centre,Science,museum_or_institution,not_started,,,,2
+INPLACE_10391,new delhi,National Zoological Park of Delhi,Zoo,park_or_site_operator,not_started,,,,2
+INPLACE_10438,new delhi,Red Fort (Lal Quila),Fort,heritage_or_monument_authority,not_started,,,,2
+INPLACE_10486,new delhi,Sunder Nursery,Park,park_or_site_operator,not_started,,,,2
+INPLACE_10528,new delhi,Waste to Wonder Park,Theme Park,park_or_site_operator,not_started,,,,2

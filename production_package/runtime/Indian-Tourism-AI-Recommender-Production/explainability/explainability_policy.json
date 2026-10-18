@@ -1,0 +1,17 @@
+{
+  "architecture": "structured evidence first, human-readable explanation second",
+  "allowed_evidence": [
+    "Cross-Encoder relevance",
+    "city constraint satisfaction",
+    "rating",
+    "review count",
+    "Bayesian confidence-adjusted rating",
+    "aggregated NLP sentiment",
+    "explicit preference matches",
+    "available structured tourism metadata"
+  ],
+  "missing_metadata_policy": "missing fields are omitted from explanations and never inferred",
+  "sentiment_policy": "sentiment is descriptive supporting evidence and is not presented as independent from rating",
+  "llm_policy": "future RAG generation may verbalize provided evidence but must not invent unsupported place facts",
+  "streamlit_policy": "show concise reasons with optional expanded evidence"
+}

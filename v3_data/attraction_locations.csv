@@ -1,0 +1,3 @@
+place_id,place_name,city_canonical,latitude,longitude,source,verification_method,verification_status
+INPLACE_07020,Indian Museum,kolkata,22.558123591765373,88.35108388465662,Google Maps,User-confirmed attraction map pin,user_confirmed
+INPLACE_07148,Victoria Memorial Hall,kolkata,22.546130383200747,88.34278739021681,Google Maps,User-confirmed attraction map pin,user_confirmed

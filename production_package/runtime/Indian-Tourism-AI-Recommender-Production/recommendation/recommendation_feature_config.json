@@ -1,0 +1,10 @@
+{
+  "place_count": 15239,
+  "global_rating_mean": 4.149156846665407,
+  "support_prior_review_count": 42.0,
+  "support_prior_method": "catalog review-count 75th percentile",
+  "quality_method": "Bayesian/shrunk mean rating",
+  "review_support_method": "log1p review count normalized by catalog maximum",
+  "sentiment_policy": "retained separately for explanation/support-aware use; not combined into quality_score because of strong rating-sentiment correlation",
+  "ranking_policy": "retrieval relevance remains primary; quality is a secondary recommendation signal"
+}

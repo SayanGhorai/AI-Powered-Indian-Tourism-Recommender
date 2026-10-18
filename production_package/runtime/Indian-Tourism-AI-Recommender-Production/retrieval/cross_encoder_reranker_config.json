@@ -1,0 +1,12 @@
+{
+  "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "role": "rerank Hybrid Top-10 candidates",
+  "validated_candidate_depth": 10,
+  "hybrid_query_strategy": "detect explicit city, remove city surface from retrieval text, and apply strict city-first filtering",
+  "cross_encoder_query_strategy": "use original natural-language user query",
+  "geographic_policy": "geographic filtering is enforced before Cross-Encoder reranking",
+  "training": "pretrained; no project fine-tuning",
+  "cross_encoder_regression": "10/10 saved benchmark queries reproduced on identical Cell-83 candidate inputs",
+  "benchmark_role": "10-query development/pilot benchmark",
+  "production_status": "validated candidate production reranker"
+}

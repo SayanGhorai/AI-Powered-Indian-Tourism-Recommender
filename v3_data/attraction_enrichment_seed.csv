@@ -1,0 +1,31 @@
+﻿place_id,city_canonical,catalog_place_name,legacy_attraction_type,legacy_entrance_fee_inr,legacy_visit_time_hours,legacy_weekly_off,verified_attraction_latitude,verified_attraction_longitude,verified_entrance_fee_inr,verified_visit_time_hours,verified_opening_hours,verified_weekly_off,source_name,source_url,verified_at,verification_notes,record_status
+INPLACE_05267,jaipur,Albert Hall Museum,Museum,200.0,2.0,,,,,,,,,,,,legacy_unverified
+INPLACE_05297,jaipur,City Palace of Jaipur,Palace,200.0,2.0,,,,,,,,,,,,legacy_unverified
+INPLACE_05340,jaipur,Hawa Mahal - Palace of Wind,Palace,50.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_05344,jaipur,Jaigarh Fort,Fort,35.0,1.5,,,,,,,,,,,,legacy_unverified
+INPLACE_06991,kolkata,Dakshineswar Kali Temple,Temple,0.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_06998,kolkata,Eden Gardens,Cricket Ground,2500.0,3.0,,,,,,,,,,,,legacy_unverified
+INPLACE_07018,kolkata,Howrah Bridge,Bridge,0.0,0.5,,,,,,,,,,,,legacy_unverified
+INPLACE_07020,kolkata,Indian Museum (Jadu Ghar),Museum,50.0,2.0,Monday,,,,,,,,,,,legacy_unverified
+INPLACE_07026,kolkata,Kalighat Kali Temple,Temple,0.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_07049,kolkata,Marble Palace,Palace,0.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_07100,kolkata,Science City,Science,60.0,3.0,,,,,,,,,,,,legacy_unverified
+INPLACE_07148,kolkata,Victoria Memorial Hall,Museum,30.0,1.5,Monday,,,,,,,,,,,legacy_unverified
+INPLACE_10121,new delhi,Agrasen Ki Baoli - Leamigo,Stepwell,0.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10178,new delhi,Chandni Chowk,Market,0.0,3.0,Sunday,,,,,,,,,,,legacy_unverified
+INPLACE_10242,new delhi,Friday Mosque (Jama Masjid),Mosque,0.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10249,new delhi,Garden of Five Senses,Park,35.0,2.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10259,new delhi,Gurudwara Bangla Sahib,Gurudwara,0.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10280,new delhi,Humayun's Tomb,Tomb,30.0,2.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10283,new delhi,India Gate,War Memorial,0.0,0.5,,,,,,,,,,,,legacy_unverified
+INPLACE_10307,new delhi,Jantar Mantar,Observatory,15.0,2.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10339,new delhi,Lodhi Garden,Park,0.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10341,new delhi,Lotus Temple,Temple,0.0,1.0,Monday,,,,,,,,,,,legacy_unverified
+INPLACE_10377,new delhi,National Gallery of Modern Art,Museum,20.0,3.0,Monday,,,,,,,,,,,legacy_unverified
+INPLACE_10386,new delhi,National Rail Museum,Museum,50.0,2.0,Monday,,,,,,,,,,,legacy_unverified
+INPLACE_10388,new delhi,National Science Centre,Science,70.0,5.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10391,new delhi,National Zoological Park of Delhi,Zoo,80.0,3.0,Friday,,,,,,,,,,,legacy_unverified
+INPLACE_10425,new delhi,Qutub Minar,Monument,35.0,1.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10438,new delhi,Red Fort (Lal Quila),Fort,35.0,2.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10486,new delhi,Sunder Nursery,Park,0.0,2.0,,,,,,,,,,,,legacy_unverified
+INPLACE_10528,new delhi,Waste to Wonder Park,Theme Park,50.0,2.0,Monday,,,,,,,,,,,legacy_unverified
