@@ -1,4 +1,5 @@
 [server]
+fileWatcherType = "none"
 headless = true
 enableCORS = true
 enableXsrfProtection = true
