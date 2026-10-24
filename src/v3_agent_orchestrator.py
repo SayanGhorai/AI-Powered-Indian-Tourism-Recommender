@@ -153,6 +153,7 @@ def run_v3_agent(
         "selected_tool": chosen_tool,
         "selection_source": selection_source,
         "planning_mode": tool_result["planning_mode"],
+        "city": tool_result["city"],
         "execution_status": tool_result["execution_status"],
         "answer": tool_result["answer"],
         "stop_count": tool_result["stop_count"],
@@ -160,6 +161,7 @@ def run_v3_agent(
             "known_admission_subtotal_inr"
         ],
         "evidence_stops": tool_result["evidence_stops"],
+        "schedule_assessment": tool_result["schedule_assessment"],
         "stops": tool_result["stops"],
         "held": tool_result["held"],
         "limitations": tool_result["limitations"],

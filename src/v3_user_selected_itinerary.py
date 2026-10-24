@@ -226,9 +226,13 @@ def plan_user_selected_visits(
         "held_selections": held,
         "stop_count": len(stops),
         "known_admission_subtotal_inr": str(known_subtotal),
-        "all_selected_admission_costs_known": all(
-            stop["admission_status"] == "KNOWN"
-            for stop in stops
+        "all_selected_admission_costs_known": (
+            len(held) == 0
+            and len(stops) == len(selections)
+            and all(
+                stop["admission_status"] == "KNOWN"
+                for stop in stops
+            )
         ),
         "route_optimized": False,
         "full_day_feasibility_verified": False,

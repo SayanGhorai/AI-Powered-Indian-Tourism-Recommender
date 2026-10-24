@@ -21,6 +21,9 @@ kaggle_checkpoints/
 
 # Application backups
 *.backup_*
+*.ui16u_backup
+*.ui*_backup
+.gitignore.ui*_backup
 
 # Secrets and local environment configuration
 .env

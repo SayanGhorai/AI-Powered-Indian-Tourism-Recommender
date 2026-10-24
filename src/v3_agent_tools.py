@@ -6,6 +6,7 @@ The LLM cannot directly modify evidence, rankings or catalog data.
 
 from src.v3_planning_controller import run_v3_planning
 from src.v3_itinerary_presenter import present_v3_itinerary
+from src.v3_conservative_schedule import assess_conservative_schedule
 
 
 TOOL_SCHEMAS = {
@@ -111,6 +112,7 @@ def execute_agent_tool(
         )
 
     presented = present_v3_itinerary(result)
+    schedule_assessment = assess_conservative_schedule(result)
 
     draft = result["draft"]
 
@@ -126,6 +128,7 @@ def execute_agent_tool(
             presented["known_admission_subtotal_inr"]
         ),
         "evidence_stops": draft["stops"],
+        "schedule_assessment": schedule_assessment,
         "stops": presented["stops"],
         "held": presented["held"],
         "limitations": presented["limitations"],

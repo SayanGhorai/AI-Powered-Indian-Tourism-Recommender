@@ -10,38 +10,264 @@ import pandas as pd
 import streamlit as st
 
 from src.retrieval import PLACES_MASTER_PATH
+from src.v3_nationwide_selection import (
+    build_destination_options,
+    build_attraction_options,
+)
+from src.v3_planning_candidates import build_planning_candidates
 from src.v3_planning_controller import run_v3_planning
 from src.v3_itinerary_presenter import present_v3_itinerary
+from src.v3_uncertainty_display import build_selection_uncertainty
+from src.v3_map_identity import resolve_map_identity
+from src.v3_conservative_schedule import assess_conservative_schedule
+from src.v3_exclusion_presentation import group_presented_exclusions
 from src.v3_agent_runtime import run_v3_agent_runtime
 
 
 st.set_page_config(
-    page_title="Indian Tourism AI — V3",
+    page_title="Indian Tourism AI Recommender",
     page_icon="🧭",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(
     """
     <style>
     .block-container {
-        max-width: 1100px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+        max-width: 1180px;
+        padding-top: 1rem;
+        padding-bottom: 2rem;
     }
+
+    div[data-testid="stVerticalBlock"] {
+        gap: 0.65rem;
+    }
+
+    div[data-testid="stForm"] {
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
+    }
+
+    div[data-testid="stForm"] h3 {
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
     h1, h2, h3 {
         letter-spacing: -0.025em;
     }
+
+    h1 {
+        font-size: clamp(1.9rem, 3vw, 2.6rem);
+        font-weight: 750;
+    }
+
     div[data-testid="stMetric"] {
         background: rgba(128, 128, 128, 0.07);
         border: 1px solid rgba(128, 128, 128, 0.16);
         border-radius: 14px;
         padding: 16px;
     }
+
+    div[data-testid="stForm"] {
+        border-radius: 16px;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 14px;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+
+
+@st.cache_data(show_spinner=False)
+def load_itinerary_rating_metadata():
+    catalog = pd.read_parquet(
+        PLACES_MASTER_PATH,
+        columns=["place_id", "rating_mean", "review_count"],
+    )
+
+    if catalog["place_id"].isna().any():
+        raise ValueError("Catalog contains missing place IDs.")
+
+    if catalog["place_id"].duplicated().any():
+        raise ValueError("Catalog contains duplicate place IDs.")
+
+    return catalog.set_index("place_id").to_dict("index")
+
+
+
+@st.cache_data(show_spinner=False)
+def load_verified_attraction_photos():
+    """Load only locally verified photograph records."""
+    import csv
+    from pathlib import Path
+
+    registry = Path("assets/attractions/photo_registry.csv")
+
+    if not registry.is_file():
+        return {}
+
+    records = {}
+
+    with registry.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+
+        for row in reader:
+            if row.get("verification_status") != "VERIFIED_COMMONS_METADATA":
+                continue
+
+            place_id = str(row.get("place_id", "")).strip()
+            filename = str(row.get("filename", "")).strip()
+
+            if not place_id or not filename:
+                continue
+
+            if Path(filename).name != filename:
+                continue
+
+            image_path = registry.parent / filename
+
+            if not image_path.is_file():
+                continue
+
+            if place_id in records:
+                raise ValueError("Duplicate verified photo place_id.")
+
+            records[place_id] = {
+                "path": str(image_path),
+                "creator": row.get("attribution_text") or row.get("creator", ""),
+                "license": row.get("license", ""),
+                "license_url": row.get("license_url", ""),
+                "source_page": row.get("source_page", ""),
+                "modification_note": row.get("modification_note", ""),
+            }
+
+    return records
+
+
+
+def render_clickable_attraction_photo(
+    photo_path, place_id, place_name, stop_index
+):
+    """Render a clickable thumbnail with a CSS-only enlarged overlay."""
+    import base64
+    import html
+    from pathlib import Path
+
+    image_path = Path(photo_path)
+    data = image_path.read_bytes()
+
+    if not data.startswith(bytes([255, 216, 255])):
+        raise ValueError("Attraction photograph must be a JPEG.")
+
+    encoded = base64.b64encode(data).decode("ascii")
+
+    safe_id = "".join(
+        character if character.isalnum() else "-"
+        for character in str(place_id)
+    )
+
+    unique_id = f"{safe_id}-{int(stop_index)}"
+    alt = html.escape(str(place_name), quote=True)
+    image_src = "data:image/jpeg;base64," + encoded
+
+    markup = f"""
+    <style>
+    #photo-thumb-{unique_id} {{
+        display: block;
+        width: 100%;
+        cursor: zoom-in;
+    }}
+
+    #photo-thumb-{unique_id} img {{
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        border-radius: 8px;
+    }}
+
+    #photo-overlay-{unique_id} {{
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        align-items: center;
+        justify-content: center;
+    }}
+
+    #photo-overlay-{unique_id}:target {{
+        display: flex;
+    }}
+
+    #photo-overlay-{unique_id} .photo-backdrop {{
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.92);
+    }}
+
+    #photo-overlay-{unique_id} .photo-large {{
+        position: relative;
+        z-index: 1;
+        max-width: 92vw;
+        max-height: 85vh;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: 8px;
+    }}
+
+    #photo-overlay-{unique_id} .photo-close {{
+        position: absolute;
+        top: 16px;
+        right: 24px;
+        z-index: 2;
+        color: white;
+        font-size: 38px;
+        line-height: 1;
+        text-decoration: none;
+        cursor: pointer;
+    }}
+    </style>
+
+    <span id="photo-close-{unique_id}"></span>
+
+    <a
+        id="photo-thumb-{unique_id}"
+        href="#photo-overlay-{unique_id}"
+        aria-label="Enlarge photograph of {alt}"
+        title="Click to enlarge photograph"
+    >
+        <img src="{image_src}" alt="{alt}" loading="lazy">
+    </a>
+
+    <div
+        id="photo-overlay-{unique_id}"
+        role="dialog"
+        aria-label="Enlarged photograph of {alt}"
+    >
+        <a
+            class="photo-backdrop"
+            href="#photo-close-{unique_id}"
+            aria-label="Close enlarged photograph"
+        ></a>
+
+        <img class="photo-large" src="{image_src}" alt="{alt}">
+
+        <a
+            class="photo-close"
+            href="#photo-close-{unique_id}"
+            aria-label="Close photograph"
+        >&#215;</a>
+    </div>
+    """
+
+    st.html(markup)
 
 
 def build_v3_itinerary_pdf(
@@ -51,6 +277,7 @@ def build_v3_itinerary_pdf(
     planning_source,
     visit_date,
     start_time,
+    schedule_assessment=None,
 ):
     """Export the displayed provisional plan without recalculating it."""
     import csv
@@ -130,6 +357,13 @@ def build_v3_itinerary_pdf(
 
     paragraph("Indian Tourism Recommender V3", "V3Title")
     paragraph("Evidence-grounded provisional itinerary")
+    verified_destination = presented.get("city")
+    if verified_destination:
+        paragraph(
+            "Destination: "
+            + str(verified_destination).title()
+        )
+
     paragraph("Visit date: " + str(visit_date))
     paragraph("Requested starting time: " + str(start_time))
     paragraph("Planning mode: " + str(planning_mode))
@@ -153,10 +387,107 @@ def build_v3_itinerary_pdf(
         if presented["stop_count"] > 0
         else "Known admission subtotal: Not applicable"
     )
-    paragraph(
-        "Attractions needing checking: "
-        + str(len(presented["held"]))
+    exclusion_groups = group_presented_exclusions(
+        presented["held"]
     )
+
+    paragraph(
+        "Attractions requiring review: "
+        + str(len(exclusion_groups["review_items"]))
+    )
+    paragraph(
+        "Geographic entries excluded: "
+        + str(len(exclusion_groups["geographic_exclusions"]))
+    )
+    paragraph(
+        "Known schedule conflicts: "
+        + str(len(exclusion_groups["schedule_conflicts"]))
+    )
+
+    if schedule_assessment is not None:
+        if not isinstance(schedule_assessment, dict):
+            raise TypeError("Invalid scheduling assessment.")
+
+        scheduled_stops = schedule_assessment["stops"]
+
+        if schedule_assessment["stop_count"] != len(evidence_stops):
+            raise ValueError("Scheduling stop count mismatch.")
+
+        if len(scheduled_stops) != len(evidence_stops):
+            raise ValueError("Scheduling stop list mismatch.")
+
+        if schedule_assessment["route_optimized"] is not False:
+            raise ValueError("Unsupported route optimization claim.")
+
+        if schedule_assessment["full_day_feasibility_verified"] is not False:
+            raise ValueError("Unsupported full-day feasibility claim.")
+
+        for index, (planned, scheduled) in enumerate(
+            zip(evidence_stops, scheduled_stops), start=1
+        ):
+            if planned["place_id"] != scheduled["place_id"]:
+                raise ValueError("Scheduling place ID mismatch.")
+
+            if scheduled["stop_number"] != index:
+                raise ValueError("Scheduling stop order mismatch.")
+
+            if scheduled["visit_duration_minutes"] is not None:
+                raise ValueError("Unverified visit duration.")
+
+            if scheduled["travel_time_from_previous_minutes"] is not None:
+                raise ValueError("Unverified travel time.")
+
+            requested = scheduled["requested_start_time"]
+
+            if index == 1:
+                if requested is None:
+                    raise ValueError("Missing requested first start.")
+                if scheduled["arrival_status"] != "USER_REQUESTED_START":
+                    raise ValueError("Invalid first arrival status.")
+                if requested != planned.get("proposed_arrival_time"):
+                    raise ValueError("First arrival mismatch.")
+            else:
+                if requested is not None:
+                    raise ValueError("Unsupported later arrival.")
+                if scheduled["arrival_status"] != "NOT_SCHEDULED":
+                    raise ValueError("Invalid later arrival status.")
+                if planned.get("proposed_arrival_time") is not None:
+                    raise ValueError("Unsupported planned later arrival.")
+
+        heading("Scheduling and travel feasibility")
+        paragraph(
+            "Scheduling assessment: "
+            + schedule_assessment["schedule_assessment_status"]
+            .replace("_", " ").title()
+        )
+
+        if not scheduled_stops:
+            paragraph(
+                "No evidence-supported stops are available for scheduling."
+            )
+
+        for scheduled in scheduled_stops:
+            paragraph(
+                "Stop " + str(scheduled["stop_number"])
+                + " - " + str(scheduled["place"])
+            )
+
+            requested = scheduled["requested_start_time"]
+
+            if requested is not None:
+                paragraph("User-requested start: " + str(requested))
+            else:
+                paragraph("Arrival time: not scheduled")
+
+            paragraph("Visit duration: unverified")
+
+            if scheduled["stop_number"] > 1:
+                paragraph(
+                    "Travel time from previous stop: unverified"
+                )
+
+        for limitation in schedule_assessment["limitations"]:
+            paragraph("- " + str(limitation))
 
     for index, stop in enumerate(evidence_stops, start=1):
         place = str(
@@ -268,15 +599,25 @@ def build_v3_itinerary_pdf(
                     )
                 )
 
-    if presented["held"]:
-        heading("Attractions needing checking")
-        for held in presented["held"]:
+    exclusion_sections = (
+        ("Attractions requiring review", "review_items"),
+        ("Geographic entries excluded", "geographic_exclusions"),
+        ("Known schedule conflicts", "schedule_conflicts"),
+    )
+
+    for section_heading, section_key in exclusion_sections:
+        items = exclusion_groups[section_key]
+        if not items:
+            continue
+
+        heading(section_heading)
+        for held in items:
             paragraph(
-                str(held.get("place", "Attraction"))
+                str(held["place"])
                 + " - "
-                + str(
-                    held.get("selection_status", "UNVERIFIED")
-                )
+                + str(held["reason"])
+                + " - "
+                + str(held["display_message"])
             )
 
     heading("Important planning limitations")
@@ -370,17 +711,36 @@ def describe_evidence_for_display(record):
     )
 
 
-st.title("🧭 Explore India, with evidence you can trust")
-st.caption(
-    "AI-powered attraction discovery and evidence-grounded "
-    "itinerary planning | Indian Tourism Recommender V3"
-)
+with st.sidebar:
+    st.markdown("## 🧭 Tourism AI")
+    st.caption("Indian Tourism AI Recommender")
 
-st.info(
-    "Plans are provisional. Verified admission evidence is used "
-    "where available. Travel times, later arrival times, holiday "
-    "exceptions and full-day feasibility are not guaranteed."
-)
+    st.divider()
+
+    st.markdown("### About Project")
+    st.write(
+        "Discover Indian attractions using AI-powered retrieval "
+        "and build provisional itineraries using approved "
+        "planning evidence where available."
+    )
+
+    st.markdown("### Dataset")
+    st.markdown("**15,239** attractions")
+    st.markdown("**1,482,466** reviews")
+    st.caption(
+        "Nationwide recommendation catalog. Verified admission, "
+        "hours and map coverage are more limited."
+    )
+
+    st.markdown("### Technology")
+    st.caption(
+        "Python · Streamlit · TF-IDF · Sentence Transformers · "
+        "FAISS · Cross-Encoder · Evidence-grounded planning"
+    )
+
+
+st.title("Indian Tourism AI Recommender")
+st.caption("Discover attractions. Plan your trip.")
 
 
 @st.cache_data(show_spinner=False)
@@ -424,11 +784,68 @@ use_agent = st.checkbox(
 if use_agent:
     st.caption(
         "Agent mode: OpenAI tool selection when configured; "
-        "otherwise deterministic planning. API usage may incur charges."
+        "otherwise deterministic planning. "
+        "API usage may incur charges."
+    )
+
+
+
+selected_city_canonical = "kolkata"
+
+if mode == "user_selected":
+    selection_catalog = load_catalog()
+
+    destination_options = build_destination_options(
+        selection_catalog
+    )
+
+    destination_keys = [
+        item["city_canonical"]
+        for item in destination_options
+    ]
+
+    destination_labels = {
+        item["city_canonical"]: item["label"]
+        for item in destination_options
+    }
+
+    selected_city_canonical = st.selectbox(
+        "Choose your destination",
+        options=destination_keys,
+        index=destination_keys.index("kolkata"),
+        format_func=lambda city: destination_labels[city],
+        key="v3_nationwide_destination",
+        help=(
+            "Search by destination name. The number in each "
+            "option shows catalog coverage, not the number "
+            "of operationally verified attractions."
+        ),
+    )
+
+    st.caption(
+        "Catalog locations and attractions are provisional. "
+        "Unverified geographic or operational information "
+        "will not be treated as approved evidence."
     )
 
 
 with st.form("v3_planning_form"):
+
+    query = None
+    selections = []
+    visitors = {}
+
+    if mode == "recommend":
+
+        query = st.text_input(
+            "Where would you like to explore?",
+            value="museums and historical attractions in Kolkata",
+            help=(
+                "Describe the destination and interests, such as "
+                "museums, history, nature or temples. Results use "
+                "the existing V2 recommendation system."
+            ),
+        )
 
     left, right = st.columns(2)
 
@@ -441,38 +858,14 @@ with st.form("v3_planning_form"):
 
     with right:
         start_time = st.time_input(
-            "Requested starting time",
+            "Starting time",
             value=time(11, 0),
             step=1800,
         )
 
-    query = None
-    selections = []
-    visitors = {}
-
     if mode == "recommend":
 
-        st.subheader("Find attractions")
-
-        query = st.text_input(
-            "What would you like to explore?",
-            value="museums and historical attractions in Kolkata",
-        )
-
-        top_k = st.slider(
-            "Maximum recommendations",
-            min_value=1,
-            max_value=5,
-            value=5,
-        )
-
-        st.subheader("Visitor categories")
-
-        st.caption(
-            "Specify ticket categories explicitly. "
-            "Admission categories are attraction-specific; "
-            "unknown prices will not be assumed."
-        )
+        st.markdown("**Visitors**")
 
         c1, c2, c3 = st.columns(3)
 
@@ -509,121 +902,235 @@ with st.form("v3_planning_form"):
             "foreign_national_admission": foreign,
         })
 
+        with st.expander(
+            "Advanced recommendation settings",
+            expanded=False,
+        ):
+            top_k = st.slider(
+                "Maximum recommendations",
+                min_value=1,
+                max_value=5,
+                value=5,
+            )
+
+            st.caption(
+                "Admission categories are attraction-specific. "
+                "Unknown ticket prices will not be assumed."
+            )
+
     else:
 
-        st.subheader("Choose attractions")
+        if selected_city_canonical == "kolkata":
+            st.markdown("#### Choose attractions")
+
+            st.caption(
+                "This initial interface supports two Kolkata "
+                "attractions with approved operating evidence. "
+                "These are user selections, not V2 rankings."
+            )
+
+            include_indian = st.checkbox(
+                "Indian Museum (Jadu Ghar)",
+                value=True,
+            )
+
+            if include_indian:
+                st.markdown("**Indian Museum ticket categories**")
+
+                c1, c2, c3 = st.columns(3)
+
+                with c1:
+                    indian_adults = st.number_input(
+                        "Indian Museum — adults",
+                        min_value=0,
+                        max_value=30,
+                        value=2,
+                        step=1,
+                    )
+
+                with c2:
+                    indian_under18 = st.number_input(
+                        "Indian Museum — below 18",
+                        min_value=0,
+                        max_value=30,
+                        value=1,
+                        step=1,
+                    )
+
+                with c3:
+                    indian_foreign = st.number_input(
+                        "Indian Museum — foreign nationals",
+                        min_value=0,
+                        max_value=30,
+                        value=0,
+                        step=1,
+                    )
+
+                selections.append({
+                    "place_id": "INPLACE_07020",
+                    "visitors": positive_categories({
+                        "adult_admission": indian_adults,
+                        "below_18_admission": indian_under18,
+                        "foreign_national_admission": indian_foreign,
+                    }),
+                })
+
+            include_victoria = st.checkbox(
+                "Victoria Memorial Hall",
+                value=True,
+            )
+
+            if include_victoria:
+
+                section_label = st.selectbox(
+                    "Victoria Memorial section",
+                    [
+                        "Museum galleries",
+                        "Gardens",
+                    ],
+                )
+
+                section = (
+                    "museum_galleries"
+                    if section_label == "Museum galleries"
+                    else "gardens"
+                )
+
+                if section == "museum_galleries":
+
+                    st.caption(
+                        "The approved museum-gallery ticket category "
+                        "used here is for Indian nationals. "
+                        "Other categories are not assumed."
+                    )
+
+                    count = st.number_input(
+                        "Indian-national museum-gallery tickets",
+                        min_value=0,
+                        max_value=30,
+                        value=2,
+                        step=1,
+                    )
+
+                    section_visitors = positive_categories({
+                        "indian_national_museum_galleries": count,
+                    })
+
+                else:
+
+                    count = st.number_input(
+                        "Garden single-entry tickets",
+                        min_value=0,
+                        max_value=30,
+                        value=2,
+                        step=1,
+                    )
+
+                    section_visitors = positive_categories({
+                        "garden_daily_single_entry": count,
+                    })
+
+                selections.append({
+                    "place_id": "INPLACE_07148",
+                    "section": section,
+                    "visitors": section_visitors,
+                })
+
+
+        st.markdown("#### Explore catalog attractions")
+
+        city_options = build_attraction_options(
+            selection_catalog,
+            selected_city_canonical,
+        )
+
+        specialized_ids = (
+            {"INPLACE_07020", "INPLACE_07148"}
+            if selected_city_canonical == "kolkata"
+            else set()
+        )
+
+        available = {
+            item["place_id"]: item
+            for item in city_options
+            if item["place_id"] not in specialized_ids
+        }
+
+        planning_candidates = build_planning_candidates(
+            selection_catalog,
+            selected_city_canonical,
+        )
+
+        candidate_lookup = {
+            item["place_id"]: item
+            for item in planning_candidates["candidates"]
+        }
+
+        assert set(available).issubset(candidate_lookup)
 
         st.caption(
-            "This initial interface supports two Kolkata "
-            "attractions with approved operating evidence. "
-            "These are user selections, not V2 rankings."
+            "Select attractions for consideration, not "
+            "confirmed itinerary stops. Identity, opening "
+            "hours and admission still require verification."
         )
 
-        include_indian = st.checkbox(
-            "Indian Museum (Jadu Ghar)",
-            value=True,
+        additional_ids = st.multiselect(
+            "Additional attractions to consider",
+            options=list(available),
+            format_func=lambda place_id: (
+                available[place_id]["label"]
+                + " | Dataset rating "
+                + f"{candidate_lookup[place_id]["dataset_rating_mean"]:.2f}/5"
+                + " | "
+                + f"{candidate_lookup[place_id]["dataset_review_count"]:,} reviews"
+            ),
+            help=(
+                "Unverified attractions may be held "
+                "by the existing itinerary planner."
+            ),
         )
 
-        if include_indian:
-            st.markdown("**Indian Museum ticket categories**")
+        st.markdown("**Visitors for catalog attractions**")
 
-            c1, c2, c3 = st.columns(3)
+        extra_c1, extra_c2, extra_c3 = st.columns(3)
 
-            with c1:
-                indian_adults = st.number_input(
-                    "Indian Museum — adults",
-                    min_value=0,
-                    max_value=30,
-                    value=2,
-                    step=1,
-                )
-
-            with c2:
-                indian_under18 = st.number_input(
-                    "Indian Museum — below 18",
-                    min_value=0,
-                    max_value=30,
-                    value=1,
-                    step=1,
-                )
-
-            with c3:
-                indian_foreign = st.number_input(
-                    "Indian Museum — foreign nationals",
-                    min_value=0,
-                    max_value=30,
-                    value=0,
-                    step=1,
-                )
-
-            selections.append({
-                "place_id": "INPLACE_07020",
-                "visitors": positive_categories({
-                    "adult_admission": indian_adults,
-                    "below_18_admission": indian_under18,
-                    "foreign_national_admission": indian_foreign,
-                }),
-            })
-
-        include_victoria = st.checkbox(
-            "Victoria Memorial Hall",
-            value=True,
-        )
-
-        if include_victoria:
-
-            section_label = st.selectbox(
-                "Victoria Memorial section",
-                [
-                    "Museum galleries",
-                    "Gardens",
-                ],
+        with extra_c1:
+            extra_adults = st.number_input(
+                "Catalog attraction adults",
+                min_value=0,
+                max_value=30,
+                value=2,
+                step=1,
             )
 
-            section = (
-                "museum_galleries"
-                if section_label == "Museum galleries"
-                else "gardens"
+        with extra_c2:
+            extra_under18 = st.number_input(
+                "Catalog attraction below 18",
+                min_value=0,
+                max_value=30,
+                value=0,
+                step=1,
             )
 
-            if section == "museum_galleries":
+        with extra_c3:
+            extra_foreign = st.number_input(
+                "Catalog attraction foreign nationals",
+                min_value=0,
+                max_value=30,
+                value=0,
+                step=1,
+            )
 
-                st.caption(
-                    "The approved museum-gallery ticket category "
-                    "used here is for Indian nationals. "
-                    "Other categories are not assumed."
-                )
+        extra_visitors = positive_categories({
+            "adult_admission": extra_adults,
+            "below_18_admission": extra_under18,
+            "foreign_national_admission": extra_foreign,
+        })
 
-                count = st.number_input(
-                    "Indian-national museum-gallery tickets",
-                    min_value=0,
-                    max_value=30,
-                    value=2,
-                    step=1,
-                )
-
-                section_visitors = positive_categories({
-                    "indian_national_museum_galleries": count,
-                })
-
-            else:
-
-                count = st.number_input(
-                    "Garden single-entry tickets",
-                    min_value=0,
-                    max_value=30,
-                    value=2,
-                    step=1,
-                )
-
-                section_visitors = positive_categories({
-                    "garden_daily_single_entry": count,
-                })
-
+        for place_id in additional_ids:
             selections.append({
-                "place_id": "INPLACE_07148",
-                "section": section,
-                "visitors": section_visitors,
+                "place_id": place_id,
+                "visitors": dict(extra_visitors),
             })
 
     submitted = st.form_submit_button(
@@ -631,6 +1138,16 @@ with st.form("v3_planning_form"):
         type="primary",
         use_container_width=True,
     )
+
+
+with st.expander("Planning limitations", expanded=False):
+    st.caption(
+        "Plans are provisional. Verified admission evidence is used "
+        "where available. Travel times, later arrival times, holiday "
+        "exceptions and full-day feasibility are not guaranteed."
+    )
+
+
 
 
 if submitted:
@@ -658,7 +1175,8 @@ if submitted:
         try:
 
             with st.spinner(
-                "Checking recommendations and approved evidence..."
+                "Preparing your provisional itinerary and checking "
+                "available approved evidence..."
             ):
 
                 catalog = load_catalog()
@@ -680,14 +1198,14 @@ if submitted:
 
                     else:
                         agent_arguments = {
-                            "city_canonical": "kolkata",
+                            "city_canonical": selected_city_canonical,
                             "selections": selections,
                             "visit_date": date_text,
                             "start_time": time_text,
                         }
                         agent_message = (
                             "Plan my explicitly selected attractions "
-                            "in Kolkata using verified evidence."
+                            f"in {selected_city_canonical} using available evidence."
                         )
 
                     agent_result = run_v3_agent_runtime(
@@ -702,6 +1220,7 @@ if submitted:
 
                     presented = {
                         "heading": agent_result["answer"].splitlines()[0],
+                        "city": agent_result["city"],
                         "stop_count": agent_result["stop_count"],
                         "known_admission_subtotal_inr": (
                             agent_result["known_admission_subtotal_inr"]
@@ -719,6 +1238,7 @@ if submitted:
                     agent_status = agent_result["agent_status"]
                     llm_status = agent_result["llm_status"]
                     evidence_stops = agent_result["evidence_stops"]
+                    schedule_assessment = agent_result["schedule_assessment"]
 
                 else:
 
@@ -739,7 +1259,7 @@ if submitted:
 
                         result = run_v3_planning(
                             mode="user_selected",
-                            city_canonical="kolkata",
+                            city_canonical=selected_city_canonical,
                             selections=selections,
                             visit_date=date_text,
                             start_time=time_text,
@@ -753,6 +1273,9 @@ if submitted:
                     agent_status = result["agent_status"]
                     llm_status = "OFFLINE_DIRECT_PLANNING"
                     evidence_stops = result["draft"]["stops"]
+                    schedule_assessment = (
+                        assess_conservative_schedule(result)
+                    )
 
             st.success("Provisional itinerary generated")
 
@@ -772,30 +1295,148 @@ if submitted:
                 else:
                     st.caption("Agent mode: " + llm_status)
 
-            m1, m2, m3 = st.columns(3)
+            # Compact result summary — presentation only.
+            summary_stops, summary_cost, summary_held = st.columns(3)
 
-            m1.metric(
-                "Stops planned",
-                presented["stop_count"],
+            subtotal = presented["known_admission_subtotal_inr"]
+
+            with summary_stops:
+                with st.container(border=True):
+                    st.metric("Stops planned", presented["stop_count"])
+
+            with summary_cost:
+                with st.container(border=True):
+                    st.metric(
+                        "Known admission",
+                        f"₹{subtotal}" if presented["stop_count"] > 0 else "N/A",
+                    )
+
+            with summary_held:
+                with st.container(border=True):
+                    st.metric("Needs checking", len(presented["held"]))
+
+            st.caption(
+                "Known admission is a ticket subtotal, "
+                "not the total trip cost."
             )
 
-            subtotal = presented[
-                "known_admission_subtotal_inr"
-            ]
+            if mode == "user_selected" and not use_agent:
+                uncertainty_records = build_selection_uncertainty(
+                    selections,
+                    date_text,
+                    time_text,
+                )
 
-            m2.metric(
-                "Known admission cost",
-                (
-                    f"₹{subtotal}"
-                    if presented["stop_count"] > 0
-                    else "Not applicable"
-                ),
-            )
+                with st.expander(
+                    "Opening hours and admission verification",
+                    expanded=False,
+                ):
+                    st.caption(
+                        "These explanations use existing approved "
+                        "evidence. They do not confirm bookings, "
+                        "live opening hours or full-day feasibility."
+                    )
 
-            m3.metric(
-                "Needs checking",
-                len(presented["held"]),
-            )
+                    for record in uncertainty_records:
+                        place_id = record["place_id"]
+                        selected_row = catalog.loc[
+                            catalog["place_id"] == place_id
+                        ]
+                        assert len(selected_row) == 1
+
+                        place_name = str(
+                            selected_row.iloc[0]["place"]
+                        )
+                        section = record["section"]
+
+                        if section:
+                            place_name += (
+                                " — "
+                                + str(section).replace("_", " ").title()
+                            )
+
+                        st.markdown("**" + place_name + "**")
+                        st.caption(
+                            "Opening hours: "
+                            + record["schedule_explanation"]
+                        )
+                        st.caption(
+                            "Admission: "
+                            + record["admission_explanation"]
+                        )
+                        st.caption(
+                            "Planning: "
+                            + record["planning_explanation"]
+                        )
+
+                        if record["admission_total_verified"]:
+                            st.caption(
+                                "Approved admission for selected "
+                                "visitors: ₹"
+                                + str(record["admission_total_inr"])
+                            )
+                        else:
+                            st.caption(
+                                "Complete admission total: unknown"
+                            )
+
+            if schedule_assessment is not None:
+                with st.expander(
+                    "Scheduling and travel feasibility",
+                    expanded=False,
+                ):
+                    st.caption(
+                        "Scheduling assessment: "
+                        + schedule_assessment[
+                            "schedule_assessment_status"
+                        ].replace("_", " ").title()
+                    )
+
+                    if not schedule_assessment["stops"]:
+                        st.info(
+                            "No evidence-supported stops are "
+                            "available for scheduling."
+                        )
+
+                    for scheduled_stop in (
+                        schedule_assessment["stops"]
+                    ):
+                        st.markdown(
+                            "**Stop "
+                            + str(scheduled_stop["stop_number"])
+                            + " — "
+                            + str(scheduled_stop["place"])
+                            + "**"
+                        )
+
+                        requested = scheduled_stop[
+                            "requested_start_time"
+                        ]
+
+                        if requested is not None:
+                            st.caption(
+                                "User-requested start: "
+                                + str(requested)
+                            )
+                        else:
+                            st.caption(
+                                "Arrival time: not scheduled"
+                            )
+
+                        st.caption(
+                            "Visit duration: unverified"
+                        )
+
+                        if scheduled_stop["stop_number"] > 1:
+                            st.caption(
+                                "Travel time from previous stop: "
+                                "unverified"
+                            )
+
+                    for limitation in (
+                        schedule_assessment["limitations"]
+                    ):
+                        st.caption("• " + str(limitation))
 
             st.markdown("### Your itinerary")
 
@@ -816,6 +1457,9 @@ if submitted:
                     "provisional itinerary stops."
                 )
 
+            rating_metadata = load_itinerary_rating_metadata()
+            photo_metadata = load_verified_attraction_photos()
+
             for index, stop in enumerate(evidence_stops, start=1):
                 if not isinstance(stop, dict):
                     raise TypeError("Invalid itinerary stop record.")
@@ -832,43 +1476,104 @@ if submitted:
                 )
 
                 with st.container(border=True):
-                    heading_col, time_col = st.columns([3, 2])
+                    stop_col, detail_col, cost_col = st.columns(
+                        [1, 5, 2],
+                        vertical_alignment="top",
+                    )
 
-                    with heading_col:
+                    with stop_col:
                         st.caption(f"STOP {index:02d}")
-                        st.markdown(f"#### {place}")
 
-                        if section:
-                            st.caption(
-                                "Section: "
-                                + str(section).replace("_", " ").title()
-                            )
-
-                    with time_col:
-                        if index == 1 and arrival is not None:
-                            st.markdown(
-                                f"**Requested start: {arrival}**"
-                            )
-                        else:
-                            st.caption("Arrival not scheduled")
-
-                    fee_col, evidence_col = st.columns(2)
-
-                    with fee_col:
-                        if admission is None:
-                            st.markdown(
-                                "**Admission: Not verified**"
-                            )
-                        else:
-                            st.markdown(
-                                f"**Admission: ₹{admission}**"
-                            )
-
-                    with evidence_col:
-                        st.caption(
-                            f"Supporting evidence: {len(evidence_ids)} "
-                            "record(s)"
+                    with detail_col:
+                        photo_record = photo_metadata.get(
+                            str(stop.get("place_id", ""))
                         )
+
+                        if photo_record is not None:
+                            image_col, info_col = st.columns(
+                                [1.4, 4.6],
+                                gap="small",
+                                vertical_alignment="top",
+                            )
+
+                            with image_col:
+                                render_clickable_attraction_photo(
+                                    photo_record["path"],
+                                    stop.get("place_id"),
+                                    place,
+                                    index,
+                                )
+                        else:
+                            info_col = st.container()
+
+                        with info_col:
+                            st.markdown(f"**{place}**")
+
+                            if photo_record is not None:
+                                credit = str(photo_record["creator"])
+                                license_name = str(photo_record["license"])
+                                source_url = str(photo_record["source_page"])
+                                license_url = str(photo_record["license_url"])
+
+                                st.caption(
+                                    f"Photo: {credit} · "
+                                    f"[{license_name}]({license_url}) · "
+                                    f"[Wikimedia Commons]({source_url}) · "
+                                    "Resized thumbnail"
+                                )
+
+
+                            stop_place_id = stop.get("place_id")
+                            rating_record = (
+                                rating_metadata.get(str(stop_place_id))
+                                if stop_place_id
+                                else None
+                            )
+
+                            if rating_record is not None:
+                                rating_value = rating_record.get("rating_mean")
+                                review_value = rating_record.get("review_count")
+
+                                if (
+                                    pd.notna(rating_value)
+                                    and pd.notna(review_value)
+                                    and 0 <= float(rating_value) <= 5
+                                    and int(review_value) > 0
+                                ):
+                                    st.caption(
+                                        f"★ {float(rating_value):.2f}/5"
+                                        f" · {int(review_value):,} dataset reviews"
+                                    )
+
+                            if planning_mode == "recommend":
+                                st.caption("V2-ranked recommendation")
+                            else:
+                                st.caption("Selected by you")
+
+                            if section:
+                                st.caption(
+                                    "Section: "
+                                    + str(section).replace("_", " ").title()
+                                )
+
+                            if index == 1 and arrival is not None:
+                                st.caption(
+                                    "Requested start: " + str(arrival)
+                                )
+                            else:
+                                st.caption("Arrival not scheduled")
+
+                            st.markdown(
+                                ":green[**Evidence-supported**] "
+                                f"· {len(evidence_ids)} approved evidence record(s)"
+                            )
+
+                    with cost_col:
+                        if admission is None:
+                            st.caption("Admission not verified")
+                        else:
+                            st.markdown(f"**₹{admission}**")
+                            st.caption("Known admission")
 
             st.markdown("### Download your itinerary")
 
@@ -879,6 +1584,9 @@ if submitted:
                 planning_source=planning_source,
                 visit_date=date_text,
                 start_time=time_text,
+                schedule_assessment=(
+                    schedule_assessment
+                ),
             )
 
             st.download_button(
@@ -979,37 +1687,11 @@ if submitted:
                     or "Attraction"
                 )
 
-                supporting_ids = (
-                    planned_stop.get("supporting_evidence_ids")
-                    or planned_stop.get("evidence_ids")
-                    or []
+                location = resolve_map_identity(
+                    planned_stop,
+                    locations_by_id,
+                    evidence_to_place,
                 )
-
-                matched_ids = {
-                    evidence_to_place[evidence_id]
-                    for evidence_id in supporting_ids
-                    if evidence_id in evidence_to_place
-                    and evidence_to_place[evidence_id]
-                }
-
-                explicit_id = planned_stop.get("place_id")
-
-                if explicit_id:
-                    matched_ids.add(str(explicit_id))
-
-                if not matched_ids and not supporting_ids:
-                    matched_ids = set(
-                        locations_by_name.get(
-                            stop_name.strip().casefold(), []
-                        )
-                    )
-
-                if len(matched_ids) != 1:
-                    missing_locations.append(stop_name)
-                    continue
-
-                place_id = next(iter(matched_ids))
-                location = locations_by_id.get(place_id)
 
                 if location is None:
                     missing_locations.append(stop_name)
@@ -1058,20 +1740,32 @@ if submitted:
                     + ", ".join(missing_locations)
                 )
 
-            if presented["held"]:
+            exclusion_groups = group_presented_exclusions(
+                presented["held"]
+            )
+
+            exclusion_sections = (
+                ("Attractions requiring review", "review_items"),
+                ("Geographic entries excluded", "geographic_exclusions"),
+                ("Known schedule conflicts", "schedule_conflicts"),
+            )
+
+            for section_heading, section_key in exclusion_sections:
+                items = exclusion_groups[section_key]
+                if not items:
+                    continue
+
                 with st.expander(
-                    "Attractions needing checking "
-                    f"({len(presented['held'])})"
+                    f"{section_heading} ({len(items)})"
                 ):
-                    for item in presented["held"]:
-                        place = item.get("place", "Attraction")
-                        reason = item.get(
-                            "selection_status", "UNVERIFIED"
+                    for item in items:
+                        st.markdown(
+                            "**" + str(item["place"]) + "**"
                         )
-                        st.write(
-                            f"**{place}** — "
-                            + str(reason).replace("_", " ").title()
+                        st.caption(
+                            str(item["reason"]).replace("_", " ").title()
                         )
+                        st.caption(item["display_message"])
 
             with st.expander(
                 "Full planning details and limitations"
@@ -1212,7 +1906,10 @@ if submitted:
             )
             with st.expander("Technical error"):
                 st.code(
-                    f"{type(exc).__name__}: {exc}"
+                    "Planning failed safely. Technical details are not "
+                    "displayed because they may contain sensitive "
+                    "information. Please review your selections "
+                    "and try again."
                 )
 
 st.divider()
