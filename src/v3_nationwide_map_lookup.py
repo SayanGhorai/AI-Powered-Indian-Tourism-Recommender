@@ -166,12 +166,25 @@ def discover_candidate_coordinate(place_id, place_name, city, budget=None):
 
         matches = search.get("search", [])
 
-        exact = [
-            item
-            for item in matches
-            if _normalize(item.get("label", ""))
-            == _normalize(place_name)
-        ]
+        exact = []
+
+        for item in matches:
+            if (
+                _normalize(item.get("label", ""))
+                != _normalize(place_name)
+            ):
+                continue
+
+            description = (
+                " " + _normalize(
+                    item.get("description", "")
+                ) + " "
+            )
+
+            city_phrase = " " + _normalize(city) + " "
+
+            if city_phrase in description:
+                exact.append(item)
 
         if len(exact) != 1:
             return None
@@ -180,13 +193,6 @@ def discover_candidate_coordinate(place_id, place_name, city, budget=None):
         qid = candidate.get("id", "")
 
         if not re.fullmatch(r"Q[1-9][0-9]*", qid):
-            return None
-
-        description = str(
-            candidate.get("description", "")
-        ).casefold()
-
-        if city.casefold() not in description:
             return None
 
         details = _request({
