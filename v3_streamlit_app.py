@@ -16,6 +16,7 @@ from src.v3_nationwide_selection import (
 )
 from src.v3_planning_candidates import build_planning_candidates
 from src.v3_planning_controller import run_v3_planning
+from src.v3_recommendation_gallery import build_recommendation_gallery
 from src.v3_itinerary_presenter import present_v3_itinerary
 from src.v3_uncertainty_display import build_selection_uncertainty
 from src.v3_map_identity import resolve_map_identity
@@ -1437,6 +1438,79 @@ if submitted:
                         schedule_assessment["limitations"]
                     ):
                         st.caption("• " + str(limitation))
+
+
+            # UI21: V2-ranked discovery gallery, separate from itinerary approval.
+            if mode == "recommend" and not use_agent:
+                v2_output = result.get("v2_result") or {}
+                recommendation_frame = v2_output.get("recommendations")
+
+                if recommendation_frame is not None:
+                    gallery_records = build_recommendation_gallery(
+                        recommendation_frame,
+                        photo_metadata=load_verified_attraction_photos(),
+                        evidence_stops=evidence_stops,
+                    )
+
+                    st.markdown("### Recommended attractions")
+                    st.caption(
+                        "V2-ranked discovery results. An attraction can appear "
+                        "here even when itinerary evidence needs checking."
+                    )
+
+                    if not gallery_records:
+                        st.info("No matching attractions were returned.")
+
+                    for gallery_item in gallery_records:
+                        with st.container(border=True):
+                            photo = gallery_item["photo"]
+
+                            if photo is not None:
+                                image_col, info_col = st.columns(
+                                    [1.4, 4.6],
+                                    gap="small",
+                                    vertical_alignment="top",
+                                )
+                                with image_col:
+                                    render_clickable_attraction_photo(
+                                        photo["path"],
+                                        gallery_item["place_id"],
+                                        gallery_item["place"],
+                                        gallery_item["rank"],
+                                    )
+                            else:
+                                info_col = st.container()
+
+                            with info_col:
+                                st.caption(
+                                    f"RECOMMENDATION {gallery_item['rank']:02d}"
+                                )
+                                st.markdown(
+                                    "**" + gallery_item["place"] + "**"
+                                )
+                                st.caption(gallery_item["city"])
+
+                                rating = gallery_item["rating_mean"]
+                                reviews = gallery_item["review_count"]
+
+                                if rating is not None and reviews is not None:
+                                    st.caption(
+                                        f"★ {rating:.2f}/5 · "
+                                        f"{reviews:,} dataset reviews"
+                                    )
+
+                                if photo is not None:
+                                    st.caption(
+                                        "Photo: " + str(photo["creator"])
+                                        + " · " + str(photo["license"])
+                                    )
+                                else:
+                                    st.caption(
+                                        "Photo unavailable — automatic "
+                                        "image matching will be added later."
+                                    )
+
+                                st.caption(gallery_item["planning_label"])
 
             st.markdown("### Your itinerary")
 
