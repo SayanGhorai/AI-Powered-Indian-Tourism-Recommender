@@ -18,6 +18,7 @@ from src.v3_planning_candidates import build_planning_candidates
 from src.v3_planning_controller import run_v3_planning
 from src.v3_recommendation_gallery import build_recommendation_gallery
 from src.v3_attraction_media import discover_attraction_photo
+from src.v3_nationwide_map_merge import build_nationwide_recommendation_map
 from src.v3_itinerary_presenter import present_v3_itinerary
 from src.v3_uncertainty_display import build_selection_uncertainty
 from src.v3_map_identity import resolve_map_identity
@@ -1550,6 +1551,65 @@ if submitted:
                                     st.caption("Photo unavailable")
 
                                 st.caption(gallery_item["planning_label"])
+
+
+            # UI21: shared discovery map, separate from strict itinerary pins.
+            if mode == "recommend" and not use_agent:
+                if recommendation_frame is not None:
+                    discovery_map = build_nationwide_recommendation_map(
+                        gallery_records,
+                        max_lookups=3,
+                        max_http_requests=6,
+                    )
+
+                    st.markdown("### Recommended attraction locations")
+                    st.caption(
+                        "One shared map for V2-ranked attractions with "
+                        "available attraction-level coordinates. "
+                        "Wikidata candidate pins are provisional, "
+                        "not verified itinerary stops."
+                    )
+
+                    map_markers = discovery_map["markers"]
+
+                    if map_markers:
+                        import pandas as pd
+
+                        map_frame = pd.DataFrame([
+                            {
+                                "latitude": marker["latitude"],
+                                "longitude": marker["longitude"],
+                                "place": marker["place"],
+                                "rank": marker["rank"],
+                                "location_status": marker["location_status"],
+                            }
+                            for marker in map_markers
+                        ])
+
+                        st.map(
+                            map_frame,
+                            latitude="latitude",
+                            longitude="longitude",
+                            color="#DC2626",
+                            size=85,
+                            height=420,
+                        )
+
+                        st.caption(
+                            f"{len(map_markers)} mapped attraction(s) "
+                            f"out of {len(gallery_records)} recommendations."
+                        )
+
+                        for marker in map_markers:
+                            st.caption(
+                                f"{marker['rank']}. {marker['place']} "
+                                f"— {marker['source']}"
+                            )
+                    else:
+                        st.info(
+                            "No attraction-level coordinates are currently "
+                            "available for these recommendations."
+                        )
 
             st.markdown("### Your itinerary")
 
