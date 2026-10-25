@@ -1500,57 +1500,177 @@ if submitted:
                                             gallery_item["rank"],
                                         )
                                     else:
-                                        st.image(
-                                            automatic_photo["photo_url"],
-                                            caption="Automatically matched",
-                                            use_container_width=True,
+                                        from html import escape as escape_image
+                                        from urllib.parse import urlsplit
+
+                                        image_url = str(
+                                            automatic_photo["photo_url"]
                                         )
+                                        image_parts = urlsplit(image_url)
+
+                                        if (
+                                            image_parts.scheme == "https"
+                                            and image_parts.hostname
+                                            in {
+                                                "thumb.wikimedia.org",
+                                                "upload.wikimedia.org",
+                                            }
+                                            and not image_parts.username
+                                            and not image_parts.password
+                                            and image_parts.port in (None, 443)
+                                        ):
+                                            safe_image_url = escape_image(
+                                                image_url, quote=True
+                                            )
+
+                                            st.markdown(
+                                                '<div style="width:100%;'
+                                                'aspect-ratio:4/3;'
+                                                'overflow:hidden;'
+                                                'border-radius:8px;">'
+                                                '<img src="' + safe_image_url
+                                                + '" alt="Attraction photograph"'
+                                                ' loading="lazy"'
+                                                ' style="display:block;'
+                                                'width:100%;height:100%;'
+                                                'object-fit:cover;">'
+                                                '</div>',
+                                                unsafe_allow_html=True,
+                                            )
+                                        else:
+                                            st.caption("Photo unavailable")
                             else:
                                 info_col = st.container()
 
                             with info_col:
-                                st.caption(
+                                from html import escape
+
+                                rank_text = (
                                     f"RECOMMENDATION {gallery_item['rank']:02d}"
                                 )
-                                st.markdown(
-                                    "**" + gallery_item["place"] + "**"
+                                name_text = escape(
+                                    str(gallery_item["place"]),
+                                    quote=True,
                                 )
-                                st.caption(gallery_item["city"])
+                                city_text = escape(
+                                    str(gallery_item["city"]),
+                                    quote=True,
+                                )
+                                planning_text = escape(
+                                    str(gallery_item["planning_label"]),
+                                    quote=True,
+                                )
 
                                 rating = gallery_item["rating_mean"]
                                 reviews = gallery_item["review_count"]
 
+                                rating_html = ""
+
                                 if rating is not None and reviews is not None:
-                                    st.caption(
-                                        f"★ {rating:.2f}/5 · "
-                                        f"{reviews:,} dataset reviews"
+                                    rating_html = (
+                                        '<div style="margin-top:4px;">'
+                                        + "★ "
+                                        + escape(f"{rating:.2f}/5")
+                                        + " · "
+                                        + escape(f"{reviews:,}")
+                                        + " dataset reviews</div>"
                                     )
 
-                                if photo is not None:
-                                    st.caption(
-                                        "Photo: " + str(photo["creator"])
-                                        + " · " + str(photo["license"])
+                                st.markdown(
+                                    '<div style="line-height:1.35;">'
+                                    '<div style="font-size:0.72rem;'
+                                    'color:#9CA3AF;">'
+                                    + rank_text + '</div>'
+                                    '<div style="font-size:1rem;'
+                                    'font-weight:650;margin-top:3px;">'
+                                    + name_text + '</div>'
+                                    '<div style="font-size:0.82rem;'
+                                    'color:#9CA3AF;margin-top:3px;">'
+                                    + city_text + '</div>'
+                                    '<div style="font-size:0.82rem;'
+                                    'color:#9CA3AF;">'
+                                    + rating_html
+                                    + '</div>'
+                                    '<div style="font-size:0.80rem;'
+                                    'color:#9CA3AF;margin-top:5px;">'
+                                    + planning_text + '</div>'
+                                    '</div>',
+                                    unsafe_allow_html=True,
+                                )
+
+                                if photo is not None or automatic_photo is not None:
+                                    from html import escape
+
+                                    photo_info = (
+                                        photo if photo is not None
+                                        else automatic_photo
                                     )
-                                elif automatic_photo is not None:
-                                    st.caption(
-                                        "Automatically matched photo: "
-                                        + str(automatic_photo["creator"])
-                                        + " · "
-                                        + str(automatic_photo["license"])
+
+                                    creator = escape(
+                                        str(photo_info.get("creator", "")),
+                                        quote=True,
                                     )
-                                    st.link_button(
-                                        "Photo source",
-                                        automatic_photo["source_page"],
+                                    license_name = escape(
+                                        str(photo_info.get("license", "")),
+                                        quote=True,
                                     )
-                                    if automatic_photo.get("license_url"):
-                                        st.link_button(
-                                            "Image license",
-                                            automatic_photo["license_url"],
+
+                                    source_url = str(
+                                        photo_info.get("source_page", "")
+                                    )
+                                    license_url = str(
+                                        photo_info.get("license_url", "")
+                                    )
+
+                                    from urllib.parse import urlsplit
+
+                                    def safe_credit_url(value):
+                                        parsed = urlsplit(value)
+                                        if (
+                                            parsed.scheme == "https"
+                                            and parsed.hostname in {
+                                                "commons.wikimedia.org",
+                                                "creativecommons.org",
+                                                "www.creativecommons.org",
+                                            }
+                                            and not parsed.username
+                                            and not parsed.password
+                                            and parsed.port in (None, 443)
+                                        ):
+                                            return escape(value, quote=True)
+                                        return ""
+
+                                    source_href = safe_credit_url(source_url)
+                                    license_href = safe_credit_url(license_url)
+
+                                    credit_parts = ["Photo: " + creator]
+
+                                    if license_href:
+                                        credit_parts.append(
+                                            '<a href="' + license_href
+                                            + '" target="_blank" rel="noopener noreferrer">'
+                                            + license_name + '</a>'
                                         )
+                                    else:
+                                        credit_parts.append(license_name)
+
+                                    if source_href:
+                                        credit_parts.append(
+                                            '<a href="' + source_href
+                                            + '" target="_blank" rel="noopener noreferrer">'
+                                            + 'Source ↗</a>'
+                                        )
+
+                                    st.markdown(
+                                        '<div style="font-size:0.78rem;'
+                                        'color:#9CA3AF;line-height:1.35;'
+                                        'margin-top:9px;">'
+                                        + " · ".join(credit_parts)
+                                        + '</div>',
+                                        unsafe_allow_html=True,
+                                    )
                                 else:
                                     st.caption("Photo unavailable")
-
-                                st.caption(gallery_item["planning_label"])
 
 
             # UI21: shared discovery map, separate from strict itinerary pins.
