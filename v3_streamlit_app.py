@@ -17,6 +17,7 @@ from src.v3_nationwide_selection import (
 from src.v3_planning_candidates import build_planning_candidates
 from src.v3_planning_controller import run_v3_planning
 from src.v3_recommendation_gallery import build_recommendation_gallery
+from src.v3_attraction_media import discover_attraction_photo
 from src.v3_itinerary_presenter import present_v3_itinerary
 from src.v3_uncertainty_display import build_selection_uncertainty
 from src.v3_map_identity import resolve_map_identity
@@ -100,6 +101,12 @@ def load_itinerary_rating_metadata():
 
     return catalog.set_index("place_id").to_dict("index")
 
+
+
+@st.cache_data(ttl=86400, max_entries=256, show_spinner=False)
+def load_automatic_attraction_photo(place_id, place_name, city):
+    """Best-effort photo lookup; never affects itinerary eligibility."""
+    return discover_attraction_photo(place_id, place_name, city)
 
 
 @st.cache_data(show_spinner=False)
@@ -1464,20 +1471,39 @@ if submitted:
                     for gallery_item in gallery_records:
                         with st.container(border=True):
                             photo = gallery_item["photo"]
+                            automatic_photo = None
 
-                            if photo is not None:
+                            if (
+                                photo is None
+                                and gallery_item["place"].casefold().strip()
+                                != gallery_item["city"].casefold().strip()
+                            ):
+                                automatic_photo = load_automatic_attraction_photo(
+                                    gallery_item["place_id"],
+                                    gallery_item["place"],
+                                    gallery_item["city"],
+                                )
+
+                            if photo is not None or automatic_photo is not None:
                                 image_col, info_col = st.columns(
                                     [1.4, 4.6],
                                     gap="small",
                                     vertical_alignment="top",
                                 )
                                 with image_col:
-                                    render_clickable_attraction_photo(
-                                        photo["path"],
-                                        gallery_item["place_id"],
-                                        gallery_item["place"],
-                                        gallery_item["rank"],
-                                    )
+                                    if photo is not None:
+                                        render_clickable_attraction_photo(
+                                            photo["path"],
+                                            gallery_item["place_id"],
+                                            gallery_item["place"],
+                                            gallery_item["rank"],
+                                        )
+                                    else:
+                                        st.image(
+                                            automatic_photo["photo_url"],
+                                            caption="Automatically matched",
+                                            use_container_width=True,
+                                        )
                             else:
                                 info_col = st.container()
 
@@ -1504,11 +1530,24 @@ if submitted:
                                         "Photo: " + str(photo["creator"])
                                         + " · " + str(photo["license"])
                                     )
-                                else:
+                                elif automatic_photo is not None:
                                     st.caption(
-                                        "Photo unavailable — automatic "
-                                        "image matching will be added later."
+                                        "Automatically matched photo: "
+                                        + str(automatic_photo["creator"])
+                                        + " · "
+                                        + str(automatic_photo["license"])
                                     )
+                                    st.link_button(
+                                        "Photo source",
+                                        automatic_photo["source_page"],
+                                    )
+                                    if automatic_photo.get("license_url"):
+                                        st.link_button(
+                                            "Image license",
+                                            automatic_photo["license_url"],
+                                        )
+                                else:
+                                    st.caption("Photo unavailable")
 
                                 st.caption(gallery_item["planning_label"])
 
